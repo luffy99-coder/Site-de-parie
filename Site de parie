@@ -1,6 +1,79 @@
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/TON-NOM-D'UTILISATEUR/NOM-DU-PROJET.git
-git push -u origin main
+// Backend (server.js)
+const axios = require('axios');
+const express = require('express');
+const cors = require('cors');
+const app = express();
+
+app.use(cors());
+
+const API_KEY = 'YOUR_API_KEY'; // Remplace avec ta clé API
+const BASE_URL = 'https://api.oddsapi.io/v3/sports';
+
+// Route pour récupérer les événements sportifs
+app.get('/sports-events', async (req, res) => {
+    try {
+        const response = await axios.get(`${BASE_URL}/football/events`, {
+            headers: {
+                'apiKey': API_KEY,
+            },
+            params: {
+                date: 'today', // Événements d'aujourd'hui
+                live: 'true',  // Inclut les événements en direct
+            },
+        });
+        res.json(response.data);
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur lors de la récupération des événements' });
+    }
+});
+
+const port = 5000;
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
+
+// Frontend (SportsEvents.js)
+import { useEffect, useState } from 'react';
+
+export default function SportsEvents() {
+    const [events, setEvents] = useState([]);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        const fetchEvents = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/sports-events');
+                const data = await response.json();
+                if (data.error) {
+                    setError(data.error);
+                } else {
+                    setEvents(data.events);
+                }
+            } catch (err) {
+                setError('Erreur de récupération des événements');
+            }
+        };
+        fetchEvents();
+    }, []);
+
+    return (
+        <div>
+            <h1>Événements de Paris Sportifs</h1>
+            {error && <p className="text-red-500">{error}</p>}
+            <ul>
+                {events.length === 0 ? (
+                    <li>Aucun événement à afficher pour l'instant.</li>
+                ) : (
+                    events.map((event, index) => (
+                        <li key={index}>
+                            <h2>{event.homeTeam} vs {event.awayTeam}</h2>
+                            <p>Date : {event.startTime}</p>
+                            <p>Status : {event.live ? 'En Direct' : 'À venir'}</p>
+                            <button>Parier</button>
+                        </li>
+                    ))
+                )}
+            </ul>
+        </div>
+    );
+}
